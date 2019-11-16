@@ -1,18 +1,18 @@
 import React from 'react';
-import { thisExpression } from '@babel/types';
-
+import ReactMediaRecorder from "react-media-recorder";
 
 class Audio extends React.Component {
+    private d_mediaRecorder:any;
+
     public state:{
-        isPlaying:boolean,
+        downloadLink?:any,
         isRecording:boolean,
         volume:number,
     };
     constructor(props) {
         super(props);
         this.state = {
-            isPlaying: false,
-            isRecording: false,
+            isRecording:false,
             volume: 0,
         };
     }
@@ -34,8 +34,25 @@ class Audio extends React.Component {
             processor.onaudioprocess = (evt) => {
                 this.processChannelData(evt.inputBuffer.getChannelData(0), analyzer);
             };
+            // @ts-ignore
+            const mediaRecorder = this.d_mediaRecorder = new MediaRecorder(stream, {
+                mimeType: "audio/webm",
+            });
 
-
+            let curChunks:Array<any> = [];
+            mediaRecorder.addEventListener("dataavailable", (evt) => {
+                console.log("DATA:", evt.data.size);
+                if (evt.data.size > 0) {
+                    curChunks.push(evt.data);
+                }
+            });
+            mediaRecorder.addEventListener("stop", () => {
+                const href = URL.createObjectURL(new Blob(curChunks));
+                this.setState({
+                    downloadLink: href,
+                });
+                curChunks = [];
+            });
         })
         .catch(error => {
             console.error("Could not get audio device:", error);
@@ -56,15 +73,39 @@ class Audio extends React.Component {
         }, 0);
     }
 
-    private handleRecordClick() {
-
+    private handleStopRecording(blobUrl) {
+        /*this.setState({
+            downloadLink: blobUrl,
+        });*/
     }
 
-    private handlePlayClick() {
-
+    private handleRecordClick() {
+        if (this.state.isRecording) {
+            this.d_mediaRecorder.stop();
+        }
+        else {
+            this.d_mediaRecorder.start();
+        }
+        this.setState({
+            isRecording: !this.state.isRecording,
+        });
     }
 
     render() {
+        function mediaRecorderRender({status, startRecording, stopRecording, mediaBlob}) {
+            return (
+                <div>
+                    <p>{status}</p>
+                    <button onClick={startRecording}>
+                        Start Recording
+                    </button>
+                    <button onClick={stopRecording}>
+                        Stop Recording
+                    </button>
+                    <audio src={mediaBlob} controls />
+                </div>
+            )
+        }
         return (
             <div>
                 <h2>
@@ -73,14 +114,18 @@ class Audio extends React.Component {
                 <button onClick={this.handleRecordClick.bind(this)}>
                     { this.state.isRecording ? "Stop" : "Record" }
                 </button>
-                <button onClick={this.handlePlayClick.bind(this)}>
-                    { this.state.isPlaying ? "Stop" : "Play" }
-                </button>
-            </div>
+                <a href={this.state.downloadLink ? this.state.downloadLink : ""}
+                   download="acetest.wav">
+                    Download {/* Have to play in Windows Media Player */}
+                </a>
+                <ReactMediaRecorder
+                    audio={true}
+                    render={mediaRecorderRender}
+                    whenStopped={this.handleStopRecording.bind(this)} />
 
-        )
+            </div>
+        );
     }
 }
-
 
 export default Audio;
