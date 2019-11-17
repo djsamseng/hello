@@ -7,6 +7,8 @@
     "@types/node": "12.12.8",
     "@types/react": "16.9.11",
     "@types/react-dom": "16.9.4",
+    "api": "^0.0.1",
+    "concurrently": "^5.0.0",
     "p5": "^0.10.2",
     "react": "^16.12.0",
     "react-dom": "^16.12.0",
@@ -15,10 +17,10 @@
     "typescript": "3.7.2"
   },
   "scripts": {
+    "start-express": "cd api && yarn start-dev",
     "start": "react-scripts start",
     "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "dev": "concurrently --kill-others \"yarn start\" \"yarn start-express\""
   },
   "eslintConfig": {
     "extends": "react-app"
