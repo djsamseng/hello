@@ -13,9 +13,19 @@ const streamManager = new MediaStreamManager();
 
 const upload = multer();
 
-router.post('/addstream', upload.single("audio"), (req:Request, res:Response) => {
-    console.log(new Int8Array(req.file.buffer)); // req.file.buffer is a buffer
+let replyFunc:any;
+
+router.post('/addaudio', upload.single("audio"), (req:Request, res:Response) => {
+    // console.log(new Int8Array(req.file.buffer)); // For debugging - matches the client
+    if (replyFunc) {
+        replyFunc.send(req.file.buffer);
+    }
     res.status(OK);
+});
+
+router.ws("/streamaudio", (ws, req) => {
+    console.log("GOT REQUEST:", req.body);
+    replyFunc = ws;
 });
 
 // /******************************************************************************

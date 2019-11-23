@@ -1,8 +1,8 @@
 import React from 'react';
+import { randomBytes } from 'crypto';
 
 class Audio extends React.Component {
     private d_mediaRecorder;
-
     public state:{
         downloadLink?:any,
         isRecording:boolean,
@@ -14,6 +14,7 @@ class Audio extends React.Component {
             isRecording:false,
             volume: 0,
         };
+        this.streamAudio();
     }
 
     componentDidMount() {
@@ -28,7 +29,6 @@ class Audio extends React.Component {
 
             let curChunks:Array<any> = [];
             mediaRecorder.addEventListener("dataavailable", (evt) => {
-                console.log("DATA:", evt.data.size);
                 if (evt.data.size > 0) {
                     curChunks.push(evt.data);
                     this.sendRecorderData(evt.data);
@@ -66,14 +66,30 @@ class Audio extends React.Component {
 
     private async sendRecorderData(data:Blob) {
         // @ts-ignore
-        // const buffer:ArrayBuffer = await data.arrayBuffer();
-        // console.log(buffer); // For debugging - matches the server
+        const buffer:ArrayBuffer = await data.arrayBuffer();
+        console.log("Send buffer:", buffer); // For debugging - matches the server
         const fd = new FormData();
         fd.append("audio", data, "myfile");
-        const response = await fetch("http://localhost:9000/api/mediastream/addstream", {
+        const response = await fetch("http://localhost:9000/api/mediastream/addaudio", {
             method: "POST",
             body: fd,
         });
+    }
+
+    private streamAudio() {
+        const ws = new WebSocket("ws://localhost:9000/api/mediastream/streamaudio");
+        ws.onopen = (evt) => {
+            console.log("OPENED!");
+            // Required for server to receive / open
+            ws.send("TEST");
+        };
+        async function processData(data) {
+            const buffer = await data.arrayBuffer();
+            console.log("Response buffer:", buffer);
+        };
+        ws.onmessage = (message) => {
+            processData(message.data);
+        };
     }
 
     private handleRecordClick() {

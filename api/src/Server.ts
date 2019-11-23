@@ -1,22 +1,15 @@
+// Init express
 import express from 'express';
+const app = express();
+import ExpressWS from "express-ws";
+const expressWS = ExpressWS(app);
+
 import {Request, Response} from "express";
 import logger from 'morgan';
 import cors from "cors";
 import Multer from "multer";
 import BaseRouter from './routes';
 
-const API_URL = "http:localhost:3000";
-
-
-// Init express
-const app = express();
-const options = {
-    allowedHeaders: ["Origin", "X-Requested-With", "Content-Type", "Accept", "X-Access-Token"],
-    credentials: true,
-    methods: "GET,HEAD,OPTIONS,PUT,PATCH,POST,DELETE",
-    origin: API_URL,
-    preflightContinue: false,
-};
 app.use(cors());
 
 // Add middleware/settings/routes to express.
