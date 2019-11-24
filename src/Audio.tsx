@@ -3,8 +3,12 @@ import React from 'react';
 class Audio extends React.Component {
     // @ts-ignore
     private d_mediaRecorder:MediaRecorder|undefined;
+
+    private d_isPlaying:boolean;
     private d_websocket:WebSocket;
     private d_receivedAudio:Array<ArrayBuffer>;
+    private d_playAudioContext:AudioContext;
+    private d_playBufferSources:Array<AudioBufferSourceNode>;
     public state:{
         downloadLink?:any,
         isPlaying:boolean,
@@ -18,7 +22,10 @@ class Audio extends React.Component {
             isRecording: false,
             volume: 0,
         };
+        this.d_isPlaying = false;
         this.d_receivedAudio = [];
+        this.d_playAudioContext = new AudioContext();
+        this.d_playBufferSources = [];
         this.d_websocket = new WebSocket("ws://localhost:9000/api/mediastream/streamaudio");
         this.setupWebsocket();
     }
@@ -98,13 +105,16 @@ class Audio extends React.Component {
 
         console.log("Setting up audio");
         let curChunks:Array<any> = [];
-        this.d_mediaRecorder.addEventListener("dataavailable", (evt) => {
+        this.d_mediaRecorder.addEventListener("dataavailable", async (evt) => {
             if (evt.data.size > 0) {
                 curChunks.push(evt.data);
                 this.sendRecorderData(evt.data);
             }
         });
         this.d_mediaRecorder.addEventListener("stop", () => {
+            if (this.state.isRecording) {
+                this.startRecording();
+            }
             const href = URL.createObjectURL(new Blob(curChunks));
             this.setState({
                 downloadLink: href,
@@ -113,36 +123,69 @@ class Audio extends React.Component {
         });
     }
 
+    private async playAudio() {
+        if (this.d_isPlaying) {
+            const bufferArray = this.d_receivedAudio.shift();
+            if (bufferArray) {
+                try {
+                    const audioBuffer = await this.d_playAudioContext.decodeAudioData(bufferArray);
+                    const source = this.d_playAudioContext.createBufferSource();
+                    source.buffer = audioBuffer;
+                    this.d_playBufferSources.push(source);
+                }
+                catch (e) {
+                    console.error("Could not decode to play audio:", e);
+                }
+
+            }
+            const sourceToPlay = this.d_playBufferSources.shift();
+            if (sourceToPlay) {
+                sourceToPlay.connect(this.d_playAudioContext.destination);
+                sourceToPlay.start();
+            }
+            setTimeout(this.playAudio.bind(this), 100);
+        }
+    }
+
     private async handlePlayClick() {
-        if (this.state.isPlaying) {
+        this.d_isPlaying = !this.state.isPlaying;
+        if (this.d_isPlaying) {
+            // Play all received audio until d_receivedAudio is empty
+            this.playAudio();
+        }
+        else {
             this.d_receivedAudio = [];
         }
-        else if (this.d_receivedAudio.length > 0) {
-            const audioContext = new AudioContext();
-            const audioBuffer = await audioContext.decodeAudioData(this.d_receivedAudio[0]);
-            const source = audioContext.createBufferSource();
-            source.buffer = audioBuffer;
-            source.connect(audioContext.destination);
-            source.start();
-        }
         this.setState({
-            isPlaying: !this.state.isPlaying,
+            isPlaying: this.d_isPlaying,
         });
+    }
+
+    private startRecording() {
+        this.d_mediaRecorder.start();
+        setTimeout(() => {
+            // To finish the audio clip, TODO: change this to always not have the header?
+            this.stopRecording();
+        }, 500);
+    }
+
+    private stopRecording() {
+        if (this.d_mediaRecorder.state === "recording") {
+            this.d_mediaRecorder.stop();
+        }
     }
 
     private handleRecordClick() {
         if (this.state.isRecording) {
-            this.d_mediaRecorder.stop();
+            this.stopRecording();
         }
         else {
-            // Fire every 100ms
-            this.d_mediaRecorder.start();
+            this.startRecording();
         }
         this.setState({
             isRecording: !this.state.isRecording,
         });
     }
-
 
 }
 
