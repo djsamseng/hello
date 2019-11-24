@@ -1,8 +1,9 @@
 import React from 'react';
-import { randomBytes } from 'crypto';
 
 class Audio extends React.Component {
-    private d_mediaRecorder;
+    // @ts-ignore
+    private d_mediaRecorder:MediaRecorder|undefined;
+    private d_websocket:WebSocket;
     public state:{
         downloadLink?:any,
         isRecording:boolean,
@@ -14,7 +15,8 @@ class Audio extends React.Component {
             isRecording:false,
             volume: 0,
         };
-        this.streamAudio();
+        this.d_websocket = new WebSocket("ws://localhost:9000/api/mediastream/streamaudio");
+        this.setupWebsocket();
     }
 
     componentDidMount() {
@@ -23,24 +25,10 @@ class Audio extends React.Component {
         })
         .then(stream => {
             // @ts-ignore
-            const mediaRecorder = this.d_mediaRecorder = new MediaRecorder(stream, {
+            this.d_mediaRecorder = new MediaRecorder(stream, {
                 mimeType: "audio/webm",
             });
-
-            let curChunks:Array<any> = [];
-            mediaRecorder.addEventListener("dataavailable", (evt) => {
-                if (evt.data.size > 0) {
-                    curChunks.push(evt.data);
-                    this.sendRecorderData(evt.data);
-                }
-            });
-            mediaRecorder.addEventListener("stop", () => {
-                const href = URL.createObjectURL(new Blob(curChunks));
-                this.setState({
-                    downloadLink: href,
-                });
-                curChunks = [];
-            });
+            this.setupAudioIfReady();
         })
         .catch(error => {
             console.error("Could not get audio device:", error);
@@ -64,32 +52,57 @@ class Audio extends React.Component {
         );
     }
 
+    private async setupWebsocket() {
+        this.d_websocket.onopen = (evt) => {
+            console.log("Open websocket sending request to open server side");
+            // Required for server to receive / open
+            //this.d_websocket.send("Open websocket");
+            this.setupAudioIfReady();
+        };
+        this.d_websocket.onmessage = (message) => {
+            this.processData(message.data);
+        };
+    }
+
+    private async processData(data) {
+        const buffer = await data.arrayBuffer();
+        console.log("Response buffer:", buffer);
+    };
+
     private async sendRecorderData(data:Blob) {
         // @ts-ignore
         const buffer:ArrayBuffer = await data.arrayBuffer();
         console.log("Send buffer:", buffer); // For debugging - matches the server
-        const fd = new FormData();
-        fd.append("audio", data, "myfile");
-        const response = await fetch("http://localhost:9000/api/mediastream/addaudio", {
-            method: "POST",
-            body: fd,
-        });
+        this.d_websocket.send(buffer);
+        // Form data example
+        // const fd = new FormData();
+        // fd.append("audio", data, "myfile");
+        // const response = await fetch("http://localhost:9000/api/mediastream/addaudio", {
+        //     method: "POST",
+        //     body: fd,
+        // });
     }
 
-    private streamAudio() {
-        const ws = new WebSocket("ws://localhost:9000/api/mediastream/streamaudio");
-        ws.onopen = (evt) => {
-            console.log("OPENED!");
-            // Required for server to receive / open
-            ws.send("TEST");
-        };
-        async function processData(data) {
-            const buffer = await data.arrayBuffer();
-            console.log("Response buffer:", buffer);
-        };
-        ws.onmessage = (message) => {
-            processData(message.data);
-        };
+    private setupAudioIfReady() {
+        if (this.d_websocket.readyState !== 1 || !this.d_mediaRecorder) {
+            return;
+        }
+
+        console.log("Setting up audio");
+        let curChunks:Array<any> = [];
+        this.d_mediaRecorder.addEventListener("dataavailable", (evt) => {
+            if (evt.data.size > 0) {
+                curChunks.push(evt.data);
+                this.sendRecorderData(evt.data);
+            }
+        });
+        this.d_mediaRecorder.addEventListener("stop", () => {
+            const href = URL.createObjectURL(new Blob(curChunks));
+            this.setState({
+                downloadLink: href,
+            });
+            curChunks = [];
+        });
     }
 
     private handleRecordClick() {
