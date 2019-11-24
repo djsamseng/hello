@@ -4,17 +4,21 @@ class Audio extends React.Component {
     // @ts-ignore
     private d_mediaRecorder:MediaRecorder|undefined;
     private d_websocket:WebSocket;
+    private d_receivedAudio:Array<ArrayBuffer>;
     public state:{
         downloadLink?:any,
+        isPlaying:boolean,
         isRecording:boolean,
         volume:number,
     };
     constructor(props) {
         super(props);
         this.state = {
-            isRecording:false,
+            isPlaying: false,
+            isRecording: false,
             volume: 0,
         };
+        this.d_receivedAudio = [];
         this.d_websocket = new WebSocket("ws://localhost:9000/api/mediastream/streamaudio");
         this.setupWebsocket();
     }
@@ -44,6 +48,9 @@ class Audio extends React.Component {
                 <button onClick={this.handleRecordClick.bind(this)}>
                     { this.state.isRecording ? "Stop" : "Record" }
                 </button>
+                <button onClick={this.handlePlayClick.bind(this)}>
+                    { this.state.isPlaying ? "Stop" : "Play" }
+                </button>
                 <a href={this.state.downloadLink ? this.state.downloadLink : ""}
                    download="acetest.wav">
                     Download {/* Have to play in Windows Media Player */}
@@ -67,6 +74,7 @@ class Audio extends React.Component {
     private async processData(data) {
         const buffer = await data.arrayBuffer();
         console.log("Response buffer:", buffer);
+        this.d_receivedAudio.push(buffer);
     };
 
     private async sendRecorderData(data:Blob) {
@@ -105,13 +113,30 @@ class Audio extends React.Component {
         });
     }
 
+    private async handlePlayClick() {
+        if (this.state.isPlaying) {
+            this.d_receivedAudio = [];
+        }
+        else if (this.d_receivedAudio.length > 0) {
+            const audioContext = new AudioContext();
+            const audioBuffer = await audioContext.decodeAudioData(this.d_receivedAudio[0]);
+            const source = audioContext.createBufferSource();
+            source.buffer = audioBuffer;
+            source.connect(audioContext.destination);
+            source.start();
+        }
+        this.setState({
+            isPlaying: !this.state.isPlaying,
+        });
+    }
+
     private handleRecordClick() {
         if (this.state.isRecording) {
             this.d_mediaRecorder.stop();
         }
         else {
             // Fire every 100ms
-            this.d_mediaRecorder.start(1000);
+            this.d_mediaRecorder.start();
         }
         this.setState({
             isRecording: !this.state.isRecording,
