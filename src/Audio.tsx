@@ -70,7 +70,7 @@ class Audio extends React.Component {
         this.d_websocket.onopen = (evt) => {
             console.log("Open websocket sending request to open server side");
             // Required for server to receive / open
-            //this.d_websocket.send("Open websocket");
+            // this.d_websocket.send("Open websocket");
             this.setupAudioIfReady();
         };
         this.d_websocket.onmessage = (message) => {
@@ -79,7 +79,8 @@ class Audio extends React.Component {
     }
 
     private async processData(data) {
-        const buffer = await data.arrayBuffer();
+        // @ts-ignore
+        const buffer:ArrayBuffer = await data.arrayBuffer();
         console.log("Response buffer:", buffer);
         this.d_receivedAudio.push(buffer);
     };

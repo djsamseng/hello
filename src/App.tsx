@@ -3,12 +3,14 @@ import logo from './logo.svg';
 import './App.css';
 
 import Audio from "./Audio";
+import Visualizer from "./Visualizer";
 
 const App: React.FC = () => {
   return (
     <div className="App">
       <header className="App-header">
         <img src={logo} className="App-logo" alt="logo" />
+        <Visualizer />
         <Audio />
         <a
           className="App-link"
