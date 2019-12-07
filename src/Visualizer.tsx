@@ -1,4 +1,5 @@
 import React from 'react';
+import NodeVisualizer from "./NodeVisualizer";
 
 class Visualizer extends React.Component {
     private d_websocket:WebSocket;
@@ -20,6 +21,7 @@ class Visualizer extends React.Component {
                 <h2>
                     Visualizer
                 </h2>
+                <NodeVisualizer />
                 <button onClick={this.handleVisualizeClick.bind(this)}>
                     { this.state.isVisualizing ? "Stop Visualization" : "Start Visualization" }
                 </button>
