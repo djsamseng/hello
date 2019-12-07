@@ -2,22 +2,49 @@ import React from 'react';
 import * as D3 from "d3";
 const RADIUS = 10;
 class NodeVisualizer extends React.Component {
-    render() {
-        const NArr = Array.apply(null, Array(5));
-        const circles = NArr.map((_, index) => {
-            return this.drawCircle({
-                cx: RADIUS + index * RADIUS * 2,
-                cy: RADIUS,
-                fill: "red",
-                level: 0.5,
-                key: String(index),
-            });
+    private svg:any;
+    constructor(props) {
+        super(props);
+        this.svg = null;
+    }
+
+    componentDidMount() {
+        setInterval(() => {
+            this.update();
+        }, 1000);
+    }
+
+    update() {
+        this.drawCircle({
+            cx: 50,
+            cy: Math.random() < 0.5 ? 50 : 150,
+            fill: "red",
+            key: "c1",
+            level: 0.5,
         });
+        this.drawCircle({
+            cx: 150,
+            cy: 50,
+            fill: "red",
+            key: "c2",
+            level: 0.5,
+        });
+    }
+
+    componentWillReceiveProps(props) {
+        // Hijack prop updates
+        this.update();
+    }
+    shouldComponentUpdate() {
+        // Only call render once
+        return false;
+    }
+
+    render() {
         return (
-            <svg width="150" height="150">
-                {circles}
+            <svg width="500" height="500" ref={elem => (this.svg = D3.select(elem))}>
             </svg>
-        )
+        );
     }
 
     drawCircle(args: {
@@ -27,14 +54,16 @@ class NodeVisualizer extends React.Component {
         key:string,
         level:number,
     }) {
-        return (
-            <circle
-                    key={args.key}
-                    cx={String(args.cx)}
-                    cy={String(args.cy)}
-                    r={String(RADIUS)}
-                    fill={args.fill} />
-        )
+        let selection = D3.select("#" + args.key);
+        if (selection.empty()) {
+            selection = this.svg.append("circle")
+                .attr("id", args.key);
+        }
+        selection
+            .attr("cx", args.cx)
+            .attr("cy", args.cy)
+            .attr("r", RADIUS)
+            .attr("fill", args.fill);
     }
 };
 
