@@ -6,29 +6,58 @@ class NodeVisualizer extends React.Component {
     constructor(props) {
         super(props);
         this.svg = null;
+
     }
 
     componentDidMount() {
-        setInterval(() => {
-            this.update();
-        }, 1000);
+        this.update();
     }
 
     update() {
-        this.drawCircle({
-            cx: 50,
-            cy: Math.random() < 0.5 ? 50 : 150,
-            fill: "red",
-            key: "c1",
-            level: 0.5,
-        });
-        this.drawCircle({
-            cx: 150,
-            cy: 50,
-            fill: "red",
-            key: "c2",
-            level: 0.5,
-        });
+        const N = 100;
+        const data = {
+            nodes: Array.apply(null, Array(N)).map((_, index) => {
+                return {
+                    id: "c" + index,
+                    group: index % 10,
+                    cx: Math.floor(Math.random() * 500),
+                    cy: Math.floor(Math.random() * 500),
+                }
+            }),
+            links: Array.apply(null, Array(N)).map((_, index) => {
+                return {
+                    source: "c" + Math.floor(Math.random() * N),
+                    target: "c" + Math.floor(Math.random() * N),
+                    value: Math.floor(Math.random() * 5),
+                };
+            }),
+        };
+
+        const nodes = data.nodes.map(d => Object.create(d));
+        const node = this.svg.append("g")
+            .attr("stroke", "#fff")
+            .attr("stroke-width", 1.5)
+            .selectAll("circle")
+            .data(nodes)
+            .join("circle")
+            .attr("r", 25)
+            .attr("fill", "red")
+            .attr("cx", d => d.cx)
+            .attr("cy", d => d.cy)
+            .attr("id", d => d.id);
+
+        const links = data.links.map(d => Object.create(d));
+        const link = this.svg.append("g")
+            .attr("stroke", "#999")
+            .attr("stroke-opacity", 0.6)
+            .selectAll("line")
+            .data(links)
+            .join("line")
+            .attr("stroke-width", d => d.value)
+            .attr("x1", l => this.svg.select("#" + l.source).attr("cx"))
+            .attr("x2", l => this.svg.select("#" + l.target).attr("cx"))
+            .attr("y1", l => this.svg.select("#" + l.source).attr("cy"))
+            .attr("y2", l => this.svg.select("#" + l.target).attr("cy"));
     }
 
     componentWillReceiveProps(props) {
