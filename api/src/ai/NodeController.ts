@@ -1,15 +1,26 @@
 import { logger } from '@shared';
 import { inherits } from 'util';
+import {
+    SerializedNodeConnection,
+    SerializedNode,
+    SerializedNodeController,
+    SerializedMasterController,
+} from "../../../SharedTypes";
 
 function makeGuid() {
-    return "g" + Math.random() * 10000;
+    return Math.random().toString(36).replace(/[^a-z]+/g, '').substr(0, 5);
 }
+
+const CANVAS = {
+    width: 1500,
+    height: 1500,
+};
 
 class NodeConnection {
     public guid:string;
     public sourceNode:Node;
     public destinationNode:Node;
-    public readonly strength:number;
+    public strength:number;
     constructor(args:{
         sourceNode:Node,
         desinationNode:Node,
@@ -29,57 +40,58 @@ class NodeConnection {
     tickForward() {
 
     }
+    serialize():SerializedNodeConnection {
+        return {
+            guid: this.guid,
+            strength: this.strength,
+            sourceNode: this.sourceNode.guid,
+            destinationNode: this.destinationNode.guid,
+        };
+    }
 };
 
 class Node {
     public guid:string;
     public value:number;
     private d_retention:number;
+    private d_position:{
+        x:number,
+        y:number,
+    };
     constructor() {
         this.guid = "node" + makeGuid();
         this.value = 0;
         this.d_retention = 0.5;
+        this.d_position = {
+            x: Math.floor(Math.random() * CANVAS.width),
+            y: Math.floor(Math.random() * CANVAS.height),
+        }
+    }
+    public serialize():SerializedNode {
+        return {
+            guid: this.guid,
+            position: this.d_position,
+            retention: this.d_retention,
+            value: this.value,
+        };
     }
 };
 
-class NodeController<NodeType,NodeConnectionType> {
+class NodeController {
     // These maps are just for cleanup / monitoring
-    protected d_connections:Map<string,NodeConnectionType>;
-    protected d_nodes:Map<string, NodeType>;
-    protected d_sourceNode:NodeType;
-    protected d_sourceNodeConnections:Map<string,NodeConnectionType>;
+    protected d_connections:Map<string,NodeConnection>;
+    protected d_nodes:Map<string, Node>;
+    protected d_sourceNode:Node;
+    protected d_sourceNodeConnections:Map<string,NodeConnection>;
     public guid:string;
     constructor(args: {
-        sourceNode:NodeType,
+        sourceNode:Node,
     }) {
-        this.d_connections = new Map<string,NodeConnectionType>();
-        this.d_sourceNodeConnections = new Map<string,NodeConnectionType>();
-        this.d_nodes = new Map<string,NodeType>();
+        this.d_connections = new Map<string,NodeConnection>();
+        this.d_sourceNodeConnections = new Map<string,NodeConnection>();
+        this.d_nodes = new Map<string,Node>();
         this.d_sourceNode = args.sourceNode;
         this.guid = "nc" + makeGuid();
-    }
-};
-
-class SimpleNodeConnection extends NodeConnection {
-
-};
-
-class SimpleNode extends Node {
-
-};
-
-class SimpleNodeController extends NodeController<SimpleNode, SimpleNodeConnection> {
-    constructor() {
-        const sourceNode = new SimpleNode();
-        super({
-            sourceNode,
-        });
-    }
-    public initNodes() {
-        for (let idx = 0; idx < 10000; idx++) {
-            const node = new SimpleNode();
-            this.d_nodes.set(node.guid, node);
-        }
     }
     public tick() {
         // A -> B
@@ -104,6 +116,53 @@ class SimpleNodeController extends NodeController<SimpleNode, SimpleNodeConnecti
             connection.tickForward();
         }
     }
+    public serialize():SerializedNodeController {
+        const nodes = [];
+        for (const node of this.d_nodes.values()) {
+            nodes.push(node.serialize());
+        }
+        const connections = [];
+        for (const conn of this.d_connections.values()) {
+            connections.push(conn.serialize());
+        }
+        return {
+            nodes,
+            connections,
+        }
+    }
+};
+
+class SimpleNodeConnection extends NodeConnection {
+
+};
+
+class SimpleNode extends Node {
+
+};
+
+class SimpleNodeController extends NodeController {
+    constructor() {
+        const sourceNode = new SimpleNode();
+        super({
+            sourceNode,
+        });
+    }
+    public initNodes() {
+        const N = 1000;
+        const createdNodes:Array<SimpleNode> = [];
+        for (let idx = 0; idx < N; idx++) {
+            const node = new SimpleNode();
+            this.d_nodes.set(node.guid, node);
+            createdNodes.push(node);
+        }
+        for (let idx = 0; idx < N / 2; idx ++) {
+            const connection = new SimpleNodeConnection({
+                sourceNode: createdNodes[Math.floor(Math.random() * N)],
+                desinationNode: createdNodes[Math.floor(Math.random() * N)],
+            });
+            this.d_connections.set(connection.guid, connection);
+        }
+    }
 };
 
 class MasterController {
@@ -120,6 +179,15 @@ class MasterController {
     }
     public tick() {
 
+    }
+    public serialize():SerializedMasterController {
+        const controllers = [];
+        for (const controller of this.d_controllers.values()) {
+            controllers.push(controller.serialize());
+        }
+        return {
+            controllers,
+        };
     }
 };
 

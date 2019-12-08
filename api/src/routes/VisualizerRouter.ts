@@ -1,6 +1,6 @@
 import { logger } from '@shared';
 import { Request, Response, Router, Express } from 'express';
-import MediaStreamManager from "../inputOutput/MediaStreamManager";
+import NodeController from "../ai/NodeController";
 
 // Init shared
 const router = Router();
@@ -18,10 +18,17 @@ const router = Router();
 
 router.ws("/subscribe", (ws, req) => {
     console.log("visualizer subscribe open request:", req.body);
+    NodeController.initControllers();
+    setInterval(() => {
+        const data = NodeController.serialize();
+        if (ws.readyState === 1) {
+            ws.send(JSON.stringify(data));
+        }
+    }, 2000);
     ws.on("message", (msg) => {
         // @ts-ignore
         // console.log(new Int8Array(msg)); // For debugging - matches the client
-        ws.send(msg);
+        // ws.send(msg);
     });
 });
 

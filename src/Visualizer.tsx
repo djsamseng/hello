@@ -1,15 +1,18 @@
 import React from 'react';
 import NodeVisualizer from "./NodeVisualizer";
 
-class Visualizer extends React.Component {
+type State = {
+    isVisualizing:boolean
+    nodeData:string
+};
+class Visualizer extends React.Component<{},State> {
     private d_websocket:WebSocket;
-    public state:{
-        isVisualizing:boolean
-    };
+    public state:State;
     constructor(props) {
         super(props);
         this.state = {
-            isVisualizing:false,
+            isVisualizing: false,
+            nodeData: "",
         };
         this.d_websocket = new WebSocket("ws://localhost:9000/api/visualizer/subscribe");
         this.setupWebsocket();
@@ -21,7 +24,8 @@ class Visualizer extends React.Component {
                 <h2>
                     Visualizer
                 </h2>
-                <NodeVisualizer />
+                <NodeVisualizer nodeData={this.state.nodeData} />
+                <br />
                 <button onClick={this.handleVisualizeClick.bind(this)}>
                     { this.state.isVisualizing ? "Stop Visualization" : "Start Visualization" }
                 </button>
@@ -49,7 +53,9 @@ class Visualizer extends React.Component {
             this.d_websocket.send("Open websocket");
         };
         this.d_websocket.onmessage = (message) => {
-            console.log("Received message:", message.data);
+            this.setState({
+                nodeData: message.data,
+            });
         };
     }
 }
