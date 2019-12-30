@@ -68,8 +68,8 @@ class Visualizer extends React.Component<{},State> {
     private async setupWebsocket() {
         this.d_websocket.onopen = (evt) => {
             console.log("Open websocket sending request to open server side");
+            // this.test();
             // Required for server to receive / open
-            this.test();
             this.d_websocket.send("Open websocket");
         };
         this.d_websocket.onmessage = (message) => {
