@@ -114,8 +114,10 @@ class NodeVisualizer extends React.Component<{nodeData:string}, {}> {
 
     render() {
         return (
-            <svg width="1500" height="1500" ref={elem => (this.svg = D3.select(elem))}>
-            </svg>
+            <div className="svg-container">
+                <svg width="1500" height="1000" ref={elem => (this.svg = D3.select(elem))}>
+                </svg>
+            </div>
         );
     }
 

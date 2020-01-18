@@ -9,19 +9,16 @@ import Visualizer from "./Visualizer";
 const App: React.FC = () => {
   return (
     <div className="App">
-      <header className="App-header">
+      <aside className="sidebar left-sidebar">Left</aside>
+      <section className="chat-screen" >
+        <header className="chat-header">
+          Hello
+        </header>
         <Visualizer />
         <Audio />
         <Chatroom />
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+      </section>
+      <aside className="sidebar right-sidebar">Right</aside>
     </div>
   );
 }

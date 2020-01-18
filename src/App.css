@@ -1,20 +1,32 @@
 .App {
-  text-align: center;
+  width: 100vw;
+  height: 100vh;
+  display: grid;
+  grid-template-columns: 1fr 4fr 1fr;
 }
 
-.App-logo {
-  height: 40vmin;
-}
-
-.App-header {
+.node-visualizer {
   background-color: #282c34;
-  min-height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  font-size: calc(10px + 2vmin);
   color: white;
+}
+
+.audio-container {
+  background-color: #282c34;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.svg-container {
+  overflow-x: scroll;
+  max-width: 66vw;
+  height: 1200;
 }
 
 .App-link {
@@ -38,13 +50,6 @@ ul {
 h4 {
   padding-left: 20px;
   margin-bottom: 10px;
-}
-
-.App {
-  width: 100vw;
-  height: 100vh;
-  display: grid;
-  grid-template-columns: 1fr 4fr 1fr;
 }
 
 .right-sidebar {

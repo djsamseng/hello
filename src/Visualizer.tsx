@@ -20,7 +20,7 @@ class Visualizer extends React.Component<{},State> {
 
     render() {
         return (
-            <div>
+            <div className="node-visualizer">
                 <h2>
                     Visualizer
                 </h2>

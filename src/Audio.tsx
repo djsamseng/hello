@@ -48,20 +48,23 @@ class Audio extends React.Component {
 
     render() {
         return (
-            <div>
+            <div className="audio-container">
                 <h2>
                     Audio Listener Volume {this.state.volume}
                 </h2>
-                <button onClick={this.handleRecordClick.bind(this)}>
+                <button className="submit-btn" onClick={this.handleRecordClick.bind(this)}>
                     { this.state.isRecording ? "Stop" : "Record" }
                 </button>
-                <button onClick={this.handlePlayClick.bind(this)}>
+                <button className="submit-btn" onClick={this.handlePlayClick.bind(this)}>
                     { this.state.isPlaying ? "Stop" : "Play" }
                 </button>
-                <a href={this.state.downloadLink ? this.state.downloadLink : ""}
-                   download="acetest.wav">
-                    Download {/* Have to play in Windows Media Player */}
-                </a>
+                <button className="submit-btn">{/* Fix to handle click and execute hidden a href*/}
+                    <a href={this.state.downloadLink ? this.state.downloadLink : ""}
+                    download="acetest.wav">
+                        Download {/* Have to play in Windows Media Player */}
+                    </a>
+                </button>
+
             </div>
         );
     }
