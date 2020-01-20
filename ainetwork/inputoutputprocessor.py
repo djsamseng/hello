@@ -7,6 +7,11 @@ outputQueues = [
 
 def chatroomReceive(ch, method, props, body):
     print("Received:{0}", body, flush=True)
+    # Change text to array of ints
+    # divide up the array of ints
+    # send to proper consumers to compute
+    # different consumers process at different speeds
+    # each matrix multiplication is a product of many publishers
     ch.basic_publish(exchange="", routing_key=outputQueues[0], body=body)
 
 # Input and output process
