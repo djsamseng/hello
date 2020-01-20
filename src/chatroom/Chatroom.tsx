@@ -43,7 +43,7 @@ class Chatroom extends React.Component<{}, State> {
 
     private async handleSendMessage(evt) {
         evt.preventDefault();
-        this.d_websocket.send("Test stuff");
+        this.d_websocket.send(this.state.chatEntryText);
     }
 
     private async setupWebsocket() {

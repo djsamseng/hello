@@ -1,3 +1,22 @@
+
+## Install
+```bash
+$ brew update
+$ brew install rabbitmq
+$ pip install pika --upgrade
+$ yarn
+```
+
+## Run
+```bash
+$ rabbitmq-server
+$ yarn dev # Start front end and webserver
+$ yarn process # Start processing node network
+```
+
+## Rabbitmq
+Management Plugin enabled by default at http://localhost:15672
+
 ## Available Scripts
 
 In the project directory, you can run:

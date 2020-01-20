@@ -117,11 +117,11 @@ class NodeController {
         }
     }
     public serialize():SerializedNodeController {
-        const nodes = [];
+        const nodes:Array<SerializedNode> = [];
         for (const node of this.d_nodes.values()) {
             nodes.push(node.serialize());
         }
-        const connections = [];
+        const connections:Array<SerializedNodeConnection> = [];
         for (const conn of this.d_connections.values()) {
             connections.push(conn.serialize());
         }
@@ -181,7 +181,7 @@ class MasterController {
 
     }
     public serialize():SerializedMasterController {
-        const controllers = [];
+        const controllers:Array<SerializedNodeController> = [];
         for (const controller of this.d_controllers.values()) {
             controllers.push(controller.serialize());
         }

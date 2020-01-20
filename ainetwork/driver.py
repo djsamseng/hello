@@ -33,20 +33,21 @@ def createNodes():
     ]
 
 class Node:
+    # self.__running Boolean
+    # self.__id String
     def __init__(self):
         print("Started rank:{0}".format(RANK), flush=True)
         self.__running = True
         pass
     def __init(self, data):
-        self.__id = data["id"]
+        self.__id = str(data["id"])
         print("Create id:{0} rank:{1}".format(self.__id, RANK), flush=True)
     def run(self):
-        # Schedule ticks
-        self.__sched = sched.scheduler(time.time, time.sleep)
-        self.__sched.enter(0, 1, self.tick, ())
-        self.__sched.run(blocking=True)
         while self.__running:
             time.sleep(DELAY)
+            shouldExit = self.tick()
+            if shouldExit:
+                break
 
     def tick(self):
         recv = COMM.irecv(source=MPI.ANY_SOURCE)
@@ -55,13 +56,11 @@ class Node:
             if msg:
                 if msg["key"] == "end":
                     self.__running = False
-                    return # RETURN
+                    return True # RETURN
 
                 if msg["key"] == "init":
                     self.__init(msg["data"])
-
-        self.__sched.enter(DELAY, 1, self.tick, ())
-        self.__sched.run(blocking=True)
+        return False
 
 class MasterNode:
     def __init__(self):
@@ -88,11 +87,11 @@ class MasterNode:
 
 if RANK == 0:
     # Delay start so all processes come up before sending them the init message
-    msg = input("Waiting for start")
+    msg = input("========== Waiting for \"start\" input =========\n")
     mNode = MasterNode()
     mNode.run()
     while True:
-        msg = input("Waiting for exit")
+        msg = input("========= Waiting for \"exit\" input =========\n")
         print("Master node got from node:", msg, flush=True)
         if msg == "exit":
             mNode.exit()
