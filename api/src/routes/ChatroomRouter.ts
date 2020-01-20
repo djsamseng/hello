@@ -1,7 +1,7 @@
 import { logger } from '@shared';
 import { Request, Response, Router, Express } from 'express';
 import { spawn } from "child_process";
-const Amqp = require("amqplib/callback_api");
+import Redis from "redis";
 
 // Init shared
 const router = Router();
@@ -58,19 +58,19 @@ if abs(sum(il')) < activation required
 [ il1' il2' ... 5,000 ]    [ il1 weight to o1 ] [ il1 weight to o2 ]      [ ol1 ]
                            [ il2 weight to o1 ] [ il2 weight to o2 ]      [ ol2 ]
                                      .                   .                   .
-                        x            .                   .          =        .
+                        x            .                   .          =        .        - one value going to B (ol2)
                                      .                   .                   .
                                     5,000               5,000               5,000
 
 - Each weight updates by the amount of input (il) vs feedback (olf)
 When A sends a message to B, B sends an ack saying it's B's il.
 
-[ Ail1 weight to o2 ]     [ Ai1 ]              [ Bil2 ]              [ Ail1 weight to o2 ]
-[ Ail2 weight to o2 ]     [ Ai2 ]              [ Bil2 ]              [ Ail2 weight to o2 ]
-           .                 .                    .                             .
-           .          +      .     x 0.01   -     .    x 0.01   =               .
-           .                 .                    .                             .
-          5,000            5,000                5,000                          5,000
+[ ... [ Ail1 weight to o2 ] ... ]     [ Ai1 ]              [ Bil2 ]             [ ... [ Ail1 weight to o2 ]  ... ]
+[ ... [ Ail2 weight to o2 ] ... ]     [ Ai2 ]              [ Bil2 ]             [ ... [ Ail2 weight to o2 ]  ... ]
+[ ...            .          ... ]        .                    .                 [ ...            .           ... ]
+[ ...            .          ... ] +      .     x 0.01   -     .    x 0.01   =   [ ...            .           ... ]
+[ ...            .          ... ]        .                    .                 [ ...            .           ... ]
+[ ...           5,000       ... ]      5,000                5,000               [ ...           5,000        ... ]
 
 
 Instead of messages use Redis Cache. Keep polling value of i array, performing matrix multiplication
@@ -80,56 +80,26 @@ and updating based off of polled value of feedback from Bil
 
 
 const SEND_QUEUE = "ChatroomInput";
-let CHATROOM_CHANNEL;
-Amqp.connect("amqp://localhost", (err1, conn) => {
-    if (err1) {
-        throw err1;
-    }
-    conn.createChannel((err2, channel) => {
-        if (err2) {
-            throw err2;
-        }
-        channel.assertQueue(SEND_QUEUE, {
-            durable: false
-        });
-        console.log("Created queue:", SEND_QUEUE);
-        CHATROOM_CHANNEL = channel;
-    });
-});
-
 const RECEIVE_QUEUE = "ChatroomOutput"
-Amqp.connect("amqp://localhost", (err1, conn) => {
-    if (err1) {
-        throw err1;
-    }
-    conn.createChannel((err2, channel) => {
-        if (err2) {
-            throw err2;
-        }
-        channel.assertQueue(RECEIVE_QUEUE, {
-            durable: false
-        });
-        channel.consume(RECEIVE_QUEUE, (msg) => {
-            console.log("CONSUME:", msg.content.toString());
-        }, {
-            noAck: true,
-        })
-    });
+const redisClient = Redis.createClient();
+const redisPub = Redis.createClient();
+const redisSub = Redis.createClient();
+redisClient.on("error", (err) => {
+    console.error("Redis error:", err);
 });
+redisSub.on("message", (channel, message) => {
+    console.log("Redis receive:", message);
+});
+redisSub.subscribe(RECEIVE_QUEUE);
 
 function sendMessage(msg) {
-    if (CHATROOM_CHANNEL) {
-        CHATROOM_CHANNEL.sendToQueue(SEND_QUEUE, Buffer.from(msg));
-    }
-    else {
-        console.warn("No chatroom rabbitmq channel");
-    }
+    redisPub.publish(SEND_QUEUE, msg);
 }
 
 router.ws("/subscribe", (ws, req) => {
     console.log("GOT REQUEST:", req.body);
     ws.on("message", (msg) => {
-        sendMessage(JSON.stringify({result: "Success", msg}));
+        sendMessage(msg);
         ws.send(JSON.stringify({result: "Success", msg}));
     });
 });
