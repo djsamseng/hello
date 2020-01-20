@@ -73,6 +73,9 @@ When A sends a message to B, B sends an ack saying it's B's il.
           5,000            5,000                5,000                          5,000
 
 
+Instead of messages use Redis Cache. Keep polling value of i array, performing matrix multiplication
+and updating based off of polled value of feedback from Bil
+
 */
 
 
