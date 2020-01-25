@@ -16,25 +16,26 @@ outputQueues = [
 ]
 
 MAX_LEN = 50
+# Take one character at a time. Feed it into the network, wait for the network
+# to process it (ack it) then send the next. Essentially this can act as a single node
+# with a single input (or multiple nodes each with a single input)
+# Node to node can be a queue, if a queue is too long, increase the number of receving nodes
+# Instead of queue we could use an array LLEN where it pops off
 def chatroomReceive(msg):
     print("Chatroom receive:", msg)
     parsed = json.loads(msg)
     redisCli.publish(outputQueues[0], "GOT" + parsed["chatText"])
     text = parsed["chatText"]
-    encoded = text.encode("ascii")
-    for i in range(0, MAX_LEN):
-        if i < len(encoded):
-            redisPipeline.set("{0}".format(i), encoded[i])
-        else:
-            redisPipeline.set("{0}".format(i), 0)
+    encoded = [t for t in text.encode("ascii")]
+    print("Chatroom sending to 0:{0}".format(encoded))
+    redisPipeline.rpush(0, *encoded)
     redisPipeline.execute()
-
 
 for queue in inputQueues:
     redisPubsub.subscribe(queue)
 
-for i in range(0, 1):
-    p = multiprocessing.Process(target=neuron.runNeuron)
+for i in range(0, 2):
+    p = multiprocessing.Process(target=neuron.runNeuron, args=(i,))
     p.start()
 
 while True:
