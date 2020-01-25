@@ -20,7 +20,6 @@ class Chatroom extends React.Component<{}, State> {
             chatEntryText: "",
             messages: [],
         };
-        this.handleSendMessage = this.handleSendMessage.bind(this);
         this.d_websocket = new WebSocket("ws://localhost:9000/api/chatroom/subscribe");
         this.setupWebsocket();
     }
@@ -43,7 +42,7 @@ class Chatroom extends React.Component<{}, State> {
                     { messages }
                 </ul>
                 <footer className="chat-footer">
-                    <form className="message-form" onSubmit={this.handleSendMessage}>
+                    <form className="message-form" onSubmit={this.handleSendMessage.bind(this)}>
                     <input
                         type="text"
                         name="chatEntry"
@@ -53,10 +52,29 @@ class Chatroom extends React.Component<{}, State> {
                         value={this.state.chatEntryText}
                     />
                     </form>
+                    <button
+                        className="submit-btn"
+                        onClick={this.handleStopClick.bind(this)}>Stop Network</button>
                 </footer>
 
             </div>
         );
+    }
+
+    private async handleStopClick(evt) {
+        try {
+            const resp = await fetch("http://localhost:9000/api/chatroom/stopnetwork", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+            });
+            const json = await resp.json();
+            console.log("Stopped network:", json);
+        }
+        catch (error) {
+            console.error("Failed to stop network:", error);
+        }
     }
 
     private handleChatEntryChange(evt) {
@@ -88,9 +106,18 @@ class Chatroom extends React.Component<{}, State> {
             console.log("Open websocket sending request to open server side");
             // this.test();
             // Required for server to receive / open
-            this.d_websocket.send("Open websocket");
+            this.d_websocket.send(JSON.stringify({
+                action: "Open websocket",
+            }));
         };
         this.d_websocket.onmessage = (message) => {
+            const data = JSON.parse(message.data);
+            if (data.message) {
+                const newMessages = this.state.messages.concat(data.message);
+                this.setState({
+                    messages: newMessages,
+                });
+            }
             console.log("RECEIVE:", message.data);
         };
     }

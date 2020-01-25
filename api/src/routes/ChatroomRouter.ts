@@ -87,21 +87,45 @@ const redisSub = Redis.createClient();
 redisClient.on("error", (err) => {
     console.error("Redis error:", err);
 });
-redisSub.on("message", (channel, message) => {
-    console.log("Redis receive:", message);
-});
+
 redisSub.subscribe(RECEIVE_QUEUE);
 
 function sendMessage(msg) {
     redisPub.publish(SEND_QUEUE, msg);
 }
+function restartNetwork() {
+    redisPub.publish("RestartNetwork", "");
+}
+function stopNetwork() {
+    redisPub.publish("StopNetwork", "");
+}
 
 router.ws("/subscribe", (ws, req) => {
+    stopNetwork();
+    restartNetwork();
     console.log("GOT REQUEST:", req.body);
     ws.on("message", (msg) => {
+        console.log("Server receive:", msg);
         sendMessage(msg);
         ws.send(JSON.stringify({result: "Success", msg}));
     });
+    redisSub.on("message", (channel, message) => {
+        console.log("Redis receive:", message);
+        ws.send(JSON.stringify({
+            message: {
+                id: `${Math.floor(Math.random() * 10000)}`,
+                senderId: "Network",
+                message,
+                updateTime: new Date(),
+            }
+        }))
+    });
+});
+
+router.post("/stopnetwork", (req, res) => {
+    console.log("Stopping network");
+    stopNetwork();
+    res.send(JSON.stringify({result: "Success"}));
 });
 
 export default router;
