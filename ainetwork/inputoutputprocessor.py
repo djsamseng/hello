@@ -67,15 +67,17 @@ def start():
             "outputs": [],
             "state": [0,],
             "weights": [
-                [0.5, 0.5, 0.5, 0.5]
+                # One input 3 outputs
+                [0.5, 0.5, 0.5,]
             ]
         }, {
             "outputs": [],
             "state": [0, 0, 0],
             "weights": [
-                [0.5, 0.5, 0.5, 0.5],
-                [0.5, 0.5, 0.5, 0.5],
-                [0.5, 0.5, 0.5, 0.5]
+                # 3 inputs 2 outputs
+                [0.5, 0.5,],
+                [0.5, 0.5,],
+                [0.5, 0.5,]
             ]
         }]
         res = neuronsCollection.insert_many(newNodes)
@@ -84,11 +86,25 @@ def start():
         newNodes[0]["outputs"] = [
             {
                 "nodeId": str(newNodes[1]["_id"]),
-                "key": "i0",
+                "key": "0",
             },
             {
                 "nodeId": str(newNodes[1]["_id"]),
-                "key": "i2",
+                "key": "2",
+            },
+            {
+                "nodeId": "None",
+                "key": "None"
+            },
+        ]
+        newNodes[1]["outputs"] = [
+            {
+                "nodeId": "None",
+                "key": "None"
+            },
+            {
+                "nodeId": "None",
+                "key": "None"
             },
         ]
         for newNode in newNodes:
