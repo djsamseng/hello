@@ -2,11 +2,24 @@ import json
 import redis
 import time
 import multiprocessing
-import neuron
+import neuron as Neuron
+import pymongo
+from bson.objectid import ObjectId as MongoObjectId
 
 redisCli = redis.Redis(host="localhost", decode_responses=True)
 redisPubsub = redisCli.pubsub()
 redisPipeline = redisCli.pipeline()
+
+mongoClient = pymongo.MongoClient('localhost', 27017)
+db = mongoClient.helloNetworkDb
+inputNeuronsCol = db.inputNeurons
+chatroomInputNeurons = []
+if inputNeuronsCol.count_documents({}) > 0:
+    cursor = inputNeuronsCol.find({
+        "inputType": "ChatroomInput"
+    })
+    for inputNeuron in cursor:
+        chatroomInputNeurons.append(str(inputNeuron["neuronId"]))
 
 inputQueues = [
     "ChatroomInput",
@@ -16,6 +29,8 @@ inputQueues = [
 outputQueues = [
     "ChatroomOutput"
 ]
+
+pool = []
 
 # Take one character at a time. Feed it into the network, wait for the network
 # to process it (ack it) then send the next. Essentially this can act as a single node
@@ -29,24 +44,71 @@ def chatroomReceive(msg):
         return
 
     # Remove me
+    text = parsed["chatText"]
     redisCli.publish(outputQueues[0], text)
-
     encoded = [t for t in text.encode("ascii")]
-    print("Chatroom sending to 0:{0}".format(encoded))
-    redisPipeline.rpush("0i0", *encoded)
+    for inputNeuronId in chatroomInputNeurons:
+        print("Chatroom sending to {0}:{1}".format(inputNeuronId, encoded))
+        redisPipeline.rpush("{0}i0".format(inputNeuronId), *encoded)
     redisPipeline.execute()
 
 for queue in inputQueues:
     redisPubsub.subscribe(queue)
 
-pool = []
 def start():
     global pool
+    global chatroomInputNeurons
     if len(pool) != 0:
         return
 
-    for i in range(0, 2):
-        p = multiprocessing.Process(target=neuron.runNeuron, args=(i,))
+    neuronsCollection = db.neurons
+    if neuronsCollection.count_documents({}) == 0:
+        newNodes = [{
+            "inputKeys": ["i0"],
+            "outputKeys": [],
+            "weights": [
+                [0.5, 0.5, 0.5, 0.5]
+            ]
+        }, {
+            "inputKeys": ["i0","i1","i2",],
+            "outputKeys": [],
+            "weights": [
+                [0.5, 0.5, 0.5, 0.5],
+                [0.5, 0.5, 0.5, 0.5],
+                [0.5, 0.5, 0.5, 0.5]
+            ]
+        }]
+        res = neuronsCollection.insert_many(newNodes)
+        newNodes[0]["_id"] = res.inserted_ids[0]
+        newNodes[1]["_id"] = res.inserted_ids[1]
+        newNodes[0]["inputKeys"] = [
+            str(newNodes[0]["_id"]) + "i0"
+        ]
+        newNodes[0]["outputKeys"] = [
+            str(newNodes[1]["_id"]) + "i0",
+            str(newNodes[1]["_id"]) + "i2",
+        ]
+        newNodes[1]["inputKeys"] = [
+            str(newNodes[1]["_id"]) + "i0",
+            str(newNodes[1]["_id"]) + "i1",
+            str(newNodes[1]["_id"]) + "i2",
+        ]
+        for newNode in newNodes:
+            neuronsCollection.find_one_and_replace(
+                { "_id": newNode["_id"] },
+                newNode
+            )
+        inputNeuronsCol.insert_one({
+            "inputType": "ChatroomInput",
+            "neuronId": str(newNodes[0]["_id"])
+        })
+        chatroomInputNeurons = [
+            str(newNodes[0]["_id"])
+        ]
+
+
+    for neuron in neuronsCollection.find():
+        p = multiprocessing.Process(target=Neuron.runNeuron, args=(neuron,))
         p.start()
         pool.append(p)
 
