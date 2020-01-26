@@ -23,22 +23,39 @@ def log(message):
 
 def tick():
     redisPipeline = STATE["redisPipeline"]
-    for inputKey in STATE["inputKeys"]:
-        redisPipeline.lpop(inputKey)
+    neuronId = str(STATE["_id"])
+    for i in range(0, len(STATE["state"])):
+        key = "{0}i{1}".format(neuronId, i)
+        redisPipeline.lpop(key)
 
     recv = np.array(redisPipeline.execute())
     log("Receive:{0}".format(recv))
     recv[recv == None] = 0
     # String to int
     recv = recv.astype(int, copy=False)
-    # recv = np.resize(recv, np.shape(STATE["weights"])[0])
+
+    # Update state
+    state = np.array(STATE["state"], dtype=int)
+    changeFactor = np.average(np.abs(STATE["weights"]), axis=1)
+    change = recv - state
+    state = state + change * changeFactor
+    state = state.astype(int)
+    STATE["state"] = state
+    log("NewState:{0}".format(state))
+    for i in range(len(state)):
+        redisPipeline.set("{0}s{1}".format(neuronId, i), int(state[i]))
+
+    # Calculate output
     outArr = np.dot(recv, STATE["weights"])
     # Float to int - send a lot less data to redis
     outArr = outArr.astype(int, copy=False)
-    for i in range(len(STATE["outputKeys"])):
-        outputKey = STATE["outputKeys"][i]
+    # Update output
+    for i in range(len(STATE["outputs"])):
+        outputNeuron = STATE["outputs"][i]
+        outputKey = outputNeuron["nodeId"] + outputNeuron["key"]
         redisPipeline.rpush(outputKey, int(outArr[i]))
         log("To:{0} Send:{1}".format(outputKey, outArr[i]))
+
     redisPipeline.execute()
 
 def runNeuron(nodeState):

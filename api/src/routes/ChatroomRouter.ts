@@ -55,12 +55,15 @@ threshold based off of current state = current input layer
 if abs(sum(il')) < activation required
     stop - do nothing
 
-[ il1' il2' ... 5,000 ]    [ il1 weight to o1 ] [ il1 weight to o2 ]      [ ol1 ]
-                           [ il2 weight to o1 ] [ il2 weight to o2 ]      [ ol2 ]
-                                     .                   .                   .
-                        x            .                   .          =        .        - one value going to B (ol2)
-                                     .                   .                   .
-                                    5,000               5,000               5,000
+[[ il1' il2' ... 5,000 ]]    [[ il1 weight to o1 ] [ il1 weight to o2 ]                 [ ol1 ]
+                              [ il2 weight to o1 ] [ il2 weight to o2 ]                 [ ol2 ]
+                                       .                   .                              .
+                          x            .                   .             ... 1,000  =     .        - one value going to B (ol2)
+                                       .                   .                              .
+                                      5,000               5,000        ]                 1,000
+
+
+
 
 - Each weight updates by the amount of input (il) vs feedback (olf)
 When A sends a message to B, B sends an ack saying it's B's il.

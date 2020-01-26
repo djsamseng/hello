@@ -49,7 +49,7 @@ def chatroomReceive(msg):
     encoded = [t for t in text.encode("ascii")]
     for inputNeuronId in chatroomInputNeurons:
         print("Chatroom sending to {0}:{1}".format(inputNeuronId, encoded))
-        redisPipeline.rpush("{0}i0".format(inputNeuronId), *encoded)
+        redisPipeline.rpush(inputNeuronId, *encoded)
     redisPipeline.execute()
 
 for queue in inputQueues:
@@ -64,14 +64,14 @@ def start():
     neuronsCollection = db.neurons
     if neuronsCollection.count_documents({}) == 0:
         newNodes = [{
-            "inputKeys": ["i0"],
-            "outputKeys": [],
+            "outputs": [],
+            "state": [0,],
             "weights": [
                 [0.5, 0.5, 0.5, 0.5]
             ]
         }, {
-            "inputKeys": ["i0","i1","i2",],
-            "outputKeys": [],
+            "outputs": [],
+            "state": [0, 0, 0],
             "weights": [
                 [0.5, 0.5, 0.5, 0.5],
                 [0.5, 0.5, 0.5, 0.5],
@@ -81,17 +81,15 @@ def start():
         res = neuronsCollection.insert_many(newNodes)
         newNodes[0]["_id"] = res.inserted_ids[0]
         newNodes[1]["_id"] = res.inserted_ids[1]
-        newNodes[0]["inputKeys"] = [
-            str(newNodes[0]["_id"]) + "i0"
-        ]
-        newNodes[0]["outputKeys"] = [
-            str(newNodes[1]["_id"]) + "i0",
-            str(newNodes[1]["_id"]) + "i2",
-        ]
-        newNodes[1]["inputKeys"] = [
-            str(newNodes[1]["_id"]) + "i0",
-            str(newNodes[1]["_id"]) + "i1",
-            str(newNodes[1]["_id"]) + "i2",
+        newNodes[0]["outputs"] = [
+            {
+                "nodeId": str(newNodes[1]["_id"]),
+                "key": "i0",
+            },
+            {
+                "nodeId": str(newNodes[1]["_id"]),
+                "key": "i2",
+            },
         ]
         for newNode in newNodes:
             neuronsCollection.find_one_and_replace(
@@ -100,10 +98,10 @@ def start():
             )
         inputNeuronsCol.insert_one({
             "inputType": "ChatroomInput",
-            "neuronId": str(newNodes[0]["_id"])
+            "neuronId": str(newNodes[0]["_id"]) + "i0"
         })
         chatroomInputNeurons = [
-            str(newNodes[0]["_id"])
+            str(newNodes[0]["_id"]) + "i0"
         ]
 
 
