@@ -80,6 +80,10 @@ class NodeVisualizer extends React.Component<{nodeData:string}, {}> {
     }
 
     componentWillReceiveProps(props) {
+        if (!props || !props.nodeData){
+            console.log("No nodeNoda");
+            return;
+        }
         // Hijack prop updates
         const nodeData:SerializedMasterController = JSON.parse(props.nodeData);
         if (nodeData.controllers.length === 0) {

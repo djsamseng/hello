@@ -3,23 +3,12 @@ import redis
 import time
 import multiprocessing
 import neuron as Neuron
-import pymongo
-from bson.objectid import ObjectId as MongoObjectId
 
 redisCli = redis.Redis(host="localhost", decode_responses=True)
 redisPubsub = redisCli.pubsub()
 redisPipeline = redisCli.pipeline()
 
-mongoClient = pymongo.MongoClient('localhost', 27017)
-db = mongoClient.helloNetworkDb
-inputNeuronsCol = db.inputNeurons
-chatroomInputNeurons = []
-if inputNeuronsCol.count_documents({}) > 0:
-    cursor = inputNeuronsCol.find({
-        "inputType": "ChatroomInput"
-    })
-    for inputNeuron in cursor:
-        chatroomInputNeurons.append(str(inputNeuron["neuronId"]))
+chatroomInputNeurons = ["Node0" + "i0"]
 
 inputQueues = [
     "ChatroomInput",
@@ -61,67 +50,54 @@ def start():
     if len(pool) != 0:
         return
 
-    neuronsCollection = db.neurons
-    if neuronsCollection.count_documents({}) == 0:
-        newNodes = [{
-            "outputs": [],
-            "state": [0,],
-            "weights": [
-                # One input 3 outputs
-                [0.5, 0.5, 0.5,]
-            ]
-        }, {
-            "outputs": [],
-            "state": [0, 0, 0],
-            "weights": [
-                # 3 inputs 2 outputs
-                [0.5, 0.5,],
-                [0.5, 0.5,],
-                [0.5, 0.5,]
-            ]
-        }]
-        res = neuronsCollection.insert_many(newNodes)
-        newNodes[0]["_id"] = res.inserted_ids[0]
-        newNodes[1]["_id"] = res.inserted_ids[1]
-        newNodes[0]["outputs"] = [
-            {
-                "nodeId": str(newNodes[1]["_id"]),
-                "key": "0",
-            },
-            {
-                "nodeId": str(newNodes[1]["_id"]),
-                "key": "2",
-            },
-            {
-                "nodeId": "None",
-                "key": "None"
-            },
+    newNodes = [{
+        "outputs": [],
+        "state": [0,],
+        "weights": [
+            # One input 3 outputs
+            [0.5, 0.5, 0.5,]
         ]
-        newNodes[1]["outputs"] = [
-            {
-                "nodeId": "None",
-                "key": "None"
-            },
-            {
-                "nodeId": "None",
-                "key": "None"
-            },
+    }, {
+        "outputs": [],
+        "state": [0, 0, 0],
+        "weights": [
+            # 3 inputs 2 outputs
+            [0.5, 0.5,],
+            [0.5, 0.5,],
+            [0.5, 0.5,]
         ]
-        for newNode in newNodes:
-            neuronsCollection.find_one_and_replace(
-                { "_id": newNode["_id"] },
-                newNode
-            )
-        inputNeuronsCol.insert_one({
-            "inputType": "ChatroomInput",
-            "neuronId": str(newNodes[0]["_id"]) + "i0"
-        })
-        chatroomInputNeurons = [
-            str(newNodes[0]["_id"]) + "i0"
-        ]
+    }]
+    newNodes[0]["_id"] = "Node0"
+    newNodes[1]["_id"] = "Node1"
+    newNodes[0]["outputs"] = [
+        {
+            "nodeId": str(newNodes[1]["_id"]),
+            "key": "0",
+        },
+        {
+            "nodeId": str(newNodes[1]["_id"]),
+            "key": "2",
+        },
+        {
+            "nodeId": "None",
+            "key": "None"
+        },
+    ]
+    newNodes[1]["outputs"] = [
+        {
+            "nodeId": "None",
+            "key": "None"
+        },
+        {
+            "nodeId": "None",
+            "key": "None"
+        },
+    ]
+    chatroomInputNeurons = [
+        str(newNodes[0]["_id"]) + "i0"
+    ]
 
-
-    for neuron in neuronsCollection.find():
+    for neuron in newNodes:
         p = multiprocessing.Process(target=Neuron.runNeuron, args=(neuron,))
         p.start()
         pool.append(p)
